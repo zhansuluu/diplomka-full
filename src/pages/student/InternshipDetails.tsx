@@ -2,8 +2,8 @@ import { Link, useParams } from "react-router-dom";
 import { MapPin, Clock, ArrowLeft, Heart, AlertCircle, Loader } from "lucide-react";
 import ApplyModal from "../../components/ApplyModal";
 import { useState } from "react";
-import { internshipService, companyService, studentService } from "../../api";
-import { useAsyncData, useAsyncMutation } from "../../hooks/useAsyncData";
+import { internshipService, companyService } from "../../api";
+import { useAsyncData } from "../../hooks/useAsyncData";
 import useFavorites from "../../hooks/useFavorites";
 
 export const InternshipDetails = () => {
@@ -22,11 +22,6 @@ export const InternshipDetails = () => {
   const { data: company, loading: loadingCompany } = useAsyncData(
     () => internship?.companyId ? companyService.getCompany(internship.companyId) : Promise.reject('No company ID'),
     [internship?.companyId]
-  );
-
-  // Follow company mutation
-  const { execute: followCompany, loading: followLoading } = useAsyncMutation(
-    (companyId: string) => studentService.followCompany(companyId)
   );
 
   if (loadingInternship) {
@@ -138,14 +133,9 @@ export const InternshipDetails = () => {
                 </Link>
 
                 <button
-                  onClick={() => {
-                    toggle(internshipId);
-                    if (company?.id && !isFavorite(internshipId)) {
-                      followCompany(company.id).catch(err => console.error('Failed to follow:', err));
-                    }
-                  }}
-                  disabled={followLoading}
-                  className={`flex items-center gap-2 border-2 border-black px-4 py-2 rounded transition ${isFavorite(internshipId) ? 'bg-red-500 text-white' : 'bg-white'} ${followLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  type="button"
+                  onClick={() => toggle(internshipId)}
+                  className={`flex items-center gap-2 border-2 border-black px-4 py-2 rounded transition ${isFavorite(internshipId) ? 'bg-red-500 text-white' : 'bg-white'}`}
                 >
                   <Heart size={18} /> {isFavorite(internshipId) ? 'Saved' : 'Save'}
                 </button>
