@@ -23,9 +23,9 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({
     try {
       await onSubmit(coverLetter);
       setCoverLetter("");
+      onClose();
     } finally {
       setSubmitting(false);
-      onClose();
     }
   };
 

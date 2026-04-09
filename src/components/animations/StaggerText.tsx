@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
-import type { ComponentType } from "react";
+import type { ElementType } from "react";
 
-const EASING = [0.22, 1, 0.36, 1];
+const EASING = [0.22, 1, 0.36, 1] as const;
 
-type StaggerTextProps<T extends keyof JSX.IntrinsicElements | ComponentType<any>> = {
+type StaggerTextProps<T extends ElementType> = {
   as?: T;
   lines: string[];
   className?: string;
@@ -12,7 +12,7 @@ type StaggerTextProps<T extends keyof JSX.IntrinsicElements | ComponentType<any>
   highlightClassName?: string;
 };
 
-export const StaggerText = <T extends keyof JSX.IntrinsicElements | React.ComponentType<any>>({
+export const StaggerText = <T extends ElementType>({
   as,
   lines,
   className,

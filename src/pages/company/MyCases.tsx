@@ -120,7 +120,7 @@ export const MyCases = () => {
                     View Details
                   </Link>
                   <Link
-                    to={`/company/submissions?internshipId=${internship.id}`}
+                    to={`/company/applications?internshipId=${internship.id}`}
                     className="flex-1 text-center bg-[#5D0CA0] border-2 border-black px-4 py-2 text-white shadow-[4px_4px_0px_black] rounded hover:translate-y-[2px] hover:shadow-none transition text-sm"
                   >
                     Applications

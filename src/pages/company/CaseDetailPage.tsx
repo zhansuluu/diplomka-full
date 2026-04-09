@@ -240,7 +240,7 @@ export const CaseDetailPage = () => {
           </Link>
 
           <Link
-            to={`/company/submissions?internshipId=${internship.id}`}
+            to={`/company/applications?internshipId=${internship.id}`}
             className="text-center border-2 border-black px-4 py-2 bg-white shadow-[4px_4px_0px_black] rounded hover:translate-y-[2px] hover:shadow-none transition"
           >
             View applications

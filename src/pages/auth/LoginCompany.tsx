@@ -30,13 +30,7 @@ export const LoginCompany = () => {
   };
 
   const handleGoogleLogin = () => {
-    // TODO: Replace with your actual Google OAuth client ID
-    const clientId = 'your-google-client-id.apps.googleusercontent.com';
-    const redirectUri = encodeURIComponent(window.location.origin + '/auth/google/callback');
-    const scope = encodeURIComponent('openid email profile');
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code&access_type=offline&prompt=consent`;
-    
-    window.location.href = googleAuthUrl;
+    navigate("/auth/google/callback?mode=local-google&role=company");
   };
 
   return (

@@ -1,8 +1,14 @@
+import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { MapPin, Clock, ArrowLeft, Loader, AlertCircle } from "lucide-react";
-import { companyService, internshipService } from "../../api";
+import { applicationService, companyService, internshipService } from "../../api";
 import type { CompanyResponse, InternshipResponse } from "../../api/types";
 import { useAsyncData } from "../../hooks/useAsyncData";
+import { useAuth } from "../../contexts/AuthContext";
+
+function getActiveInternshipStorageKey(userId: string) {
+  return `caseup:selected-internship-id:${userId}`;
+}
 
 function monthsDuration(startIso: string, endIso: string): string {
   const a = new Date(startIso).getTime();
@@ -27,8 +33,60 @@ function parseResponsibilityLines(requirements: string): string[] {
 }
 
 export const MyInternship = () => {
+  const { user, userRole } = useAuth();
   const [searchParams] = useSearchParams();
-  const id = searchParams.get("internshipId");
+  const requestedId = searchParams.get("internshipId");
+
+  const { data: applications = [], loading: loadingApplications } = useAsyncData(
+    async () => {
+      if (userRole !== "student" || !user?.id) return [];
+      return applicationService.listForStudent(user.id);
+    },
+    [user?.id, userRole]
+  );
+
+  const fallbackApplication = [...(applications ?? [])]
+    .sort((a, b) => {
+      const rank = (status: string) => (status === "ACCEPTED" ? 0 : status === "PENDING" ? 1 : 2);
+      const byStatus = rank(a.status) - rank(b.status);
+      if (byStatus !== 0) return byStatus;
+      return new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime();
+    })[0];
+
+  const savedId =
+    typeof window !== "undefined" && user?.id
+      ? window.localStorage.getItem(getActiveInternshipStorageKey(user.id))
+      : null;
+
+  const validSavedId =
+    savedId && (applications ?? []).some((application) => application.internshipId === savedId)
+      ? savedId
+      : null;
+
+  const multipleInternships = (applications ?? []).length > 1;
+  const id =
+    requestedId ??
+    (!multipleInternships ? validSavedId ?? fallbackApplication?.internshipId ?? null : null);
+
+  const { data: internshipOptions = [], loading: loadingOptions } = useAsyncData(
+    async () => {
+      if (!applications || applications.length === 0) return [];
+      const internships = await Promise.all(
+        applications.map(async (application) => {
+          const internship = await internshipService.getInternship(application.internshipId);
+          let company: CompanyResponse | null = null;
+          try {
+            company = await companyService.getCompany(internship.companyId);
+          } catch {
+            company = null;
+          }
+          return { application, internship, company };
+        })
+      );
+      return internships;
+    },
+    [(applications ?? []).map((application) => application.id).join(",")]
+  );
 
   const { data: internship, loading, error } = useAsyncData(
     async (): Promise<InternshipResponse | null> => {
@@ -46,7 +104,90 @@ export const MyInternship = () => {
     [internship?.companyId]
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!user?.id) return;
+    if (!internship?.id) return;
+    window.localStorage.setItem(getActiveInternshipStorageKey(user.id), internship.id);
+  }, [internship?.id, user?.id]);
+
+  if (!id && (loadingApplications || loadingOptions)) {
+    return (
+      <div className="flex flex-col gap-8 px-20 py-6 max-w-2xl">
+        <div className="flex items-center gap-3 text-gray-700">
+          <Loader className="animate-spin" size={24} />
+          Loading your internship...
+        </div>
+      </div>
+    );
+  }
+
   if (!id) {
+    if ((internshipOptions ?? []).length > 0) {
+      return (
+        <div className="flex flex-col gap-8 px-20 py-6">
+          <Link
+            to="/student/internships"
+            className="w-fit border-2 border-black px-4 py-2 bg-white shadow-[4px_4px_0px_black] rounded hover:translate-y-[2px] hover:shadow-none transition flex items-center gap-2"
+          >
+            <ArrowLeft size={16} />
+            Back to Internships
+          </Link>
+
+          <div>
+            <h2 className="text-3xl font-bold">My Internships</h2>
+            <p className="text-gray-600 mt-2">Choose which internship you want to open.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {(internshipOptions ?? []).map(({ application, internship, company }) => {
+              const duration =
+                internship.startDate && internship.endDate
+                  ? monthsDuration(internship.startDate, internship.endDate)
+                  : "Duration TBA";
+              const statusLabel =
+                application.status === "ACCEPTED"
+                  ? "Accepted"
+                  : application.status === "PENDING"
+                    ? "Pending"
+                    : "Rejected";
+
+              return (
+                <Link
+                  key={application.id}
+                  to={`/student/my-internship?internshipId=${internship.id}`}
+                  className="bg-white border-2 border-black p-6 shadow-[6px_6px_0px_black] rounded flex flex-col gap-4 hover:translate-y-[2px] hover:shadow-none transition"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-2xl font-bold break-words">{internship.title}</h3>
+                      <p className="text-gray-600 mt-1">{company?.companyName ?? "Company"}</p>
+                    </div>
+                    <span className="border border-black px-3 py-1 rounded-full bg-[#EDE7FF] text-sm font-medium">
+                      {statusLabel}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-4 flex-wrap text-sm text-gray-700">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={14} />
+                      {company?.headquarters || "Location TBA"}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock size={14} />
+                      {duration}
+                    </span>
+                  </div>
+
+                  <p className="text-gray-600 line-clamp-3">{internship.description}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col gap-8 px-20 py-6 max-w-2xl">
         <Link
@@ -59,9 +200,7 @@ export const MyInternship = () => {
         <div className="bg-white border-2 border-black p-8 shadow-[6px_6px_0px_black] rounded">
           <h2 className="text-2xl font-bold mb-2">No internship selected</h2>
           <p className="text-gray-600 mb-4">
-            Open an internship from the catalog, then add{" "}
-            <code className="bg-gray-100 px-1 rounded">?internshipId=…</code> to this page URL, or use a link from
-            internship details.
+            You have not applied to any internships yet. Once you apply, your current internship will appear here automatically.
           </p>
           <Link
             to="/student/internships"
@@ -86,7 +225,7 @@ export const MyInternship = () => {
         </Link>
         <div className="flex items-center gap-3 text-gray-700">
           <Loader className="animate-spin" size={24} />
-          Loading…
+          Loading...
         </div>
       </div>
     );
@@ -141,7 +280,7 @@ export const MyInternship = () => {
             <div className="min-w-0">
               <h2 className="text-3xl font-bold break-words">{internship.title}</h2>
               <p className="text-gray-600 mt-1">
-                {loadingCompany ? "…" : company?.companyName ?? "Company"}
+                {loadingCompany ? "..." : company?.companyName ?? "Company"}
               </p>
               <div className="flex gap-4 mt-3 flex-wrap">
                 <span className="flex items-center gap-1 text-sm border border-black px-3 py-1 rounded-full bg-gray-100">
@@ -202,7 +341,7 @@ export const MyInternship = () => {
           {loadingCompany ? (
             <div className="flex items-center gap-2 text-gray-600">
               <Loader className="animate-spin" size={18} />
-              Loading…
+              Loading...
             </div>
           ) : (
             <>

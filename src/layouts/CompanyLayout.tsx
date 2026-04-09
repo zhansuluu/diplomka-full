@@ -7,7 +7,6 @@ import {
   Users,
   MessageSquare,
   Building2,
-  Settings,
   LogOut,
   Bot,
 } from "lucide-react";

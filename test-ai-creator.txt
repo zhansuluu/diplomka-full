@@ -1,0 +1,150 @@
+Backend Developer Internship (Go)
+
+We are looking for a backend intern to help build and improve core services of our AI-powered platform at SynapseFlow. The intern will work on real product tasks inside an existing Go-based architecture, contributing to APIs, services, and data processing workflows.
+
+Main goals of the internship:
+build and improve RESTful APIs and backend services
+design clean and scalable service architecture
+improve data handling and database interactions
+implement reliable error handling and logging
+understand real-world backend workflows from request to persistence
+support integration with external services (e.g., AI APIs, queues)
+Expected responsibilities:
+analyze existing backend flows and identify improvement areas
+implement new API endpoints and extend existing ones
+work with databases (queries, migrations, schema updates)
+structure code using layered architecture (handler/service/repository)
+implement validation, error handling, and logging
+test APIs and debug edge cases
+document endpoints and service behavior
+Required skills:
+Go (Golang)
+understanding of REST APIs and HTTP
+basic knowledge of SQL and relational databases
+understanding of backend architecture concepts
+ability to write clean and maintainable code
+attention to detail
+Nice to have:
+experience with frameworks (Gin, Fiber, Echo)
+PostgreSQL (pgx, sqlx, gorm)
+Docker basics
+Redis or message brokers (RabbitMQ, Kafka)
+understanding of microservices
+basic testing knowledge
+Program expectations:
+internship should last around 4 weeks
+tasks should go from basic API development to more complex integrations
+tasks should be practical and portfolio-worthy
+each task should have clear acceptance criteria
+difficulty should gradually increase during the program
+Internship Tasks
+Task 1
+
+Title: Build Simple REST API (CRUD)
+Difficulty: Easy
+Duration: 2–3 days
+
+Objective:
+Create a basic REST API for managing entities (e.g., notes or tasks) to demonstrate understanding of CRUD operations and project structure.
+
+Requirements:
+
+Implement create, read, update, delete endpoints
+Use in-memory storage or simple DB
+Structure project (handler/service/repository)
+Add basic validation
+
+Acceptance criteria:
+
+All CRUD operations work correctly
+Proper HTTP status codes are returned
+Code is clean and structured
+API runs without errors
+Task 2
+
+Title: Database Integration (PostgreSQL)
+Difficulty: Easy–Medium
+Duration: 3–4 days
+
+Objective:
+Replace in-memory storage with a real database and implement persistent data handling.
+
+Requirements:
+
+Connect PostgreSQL
+Implement queries for CRUD operations
+Add migrations
+Handle DB errors properly
+
+Acceptance criteria:
+
+Data persists in database
+Queries work correctly
+No crashes on DB errors
+Clean repository layer implementation
+Task 3
+
+Title: Authentication (JWT)
+Difficulty: Medium
+Duration: 4–5 days
+
+Objective:
+Implement basic user authentication and protect API endpoints.
+
+Requirements:
+
+Register and login endpoints
+JWT-based authentication
+Middleware for protected routes
+Password hashing
+
+Acceptance criteria:
+
+Users can register and login
+Protected routes require valid token
+Invalid tokens are handled correctly
+Security basics are followed
+Task 4
+
+Title: Integration with External Service (AI or Mock API)
+Difficulty: Medium
+Duration: 4–5 days
+
+Objective:
+Integrate backend with an external API (e.g., AI summarization or mock service).
+
+Requirements:
+
+Call external API from backend
+Handle timeouts and errors
+Parse and store response
+Add config via environment variables
+
+Acceptance criteria:
+
+External API integration works
+Errors are handled gracefully
+Response is correctly processed
+No blocking or crashes
+Task 5
+
+Title: Logging, Validation, and Testing
+Difficulty: Medium
+Duration: 3–4 days
+
+Objective:
+Improve reliability and maintainability of the service.
+
+Requirements:
+
+Add structured logging
+Improve validation
+Write basic unit tests
+Handle edge cases
+
+Acceptance criteria:
+
+Logs are readable and useful
+Validation covers incorrect inputs
+Tests run successfully
+Application is stable under basic scenarios

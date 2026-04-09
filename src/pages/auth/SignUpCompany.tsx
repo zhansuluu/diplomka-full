@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { companyService } from "../../api";
 import { Loader } from "lucide-react";
+import { useAuthContext } from "../../contexts/AuthContext";
 
 const REQUIRED_MSG = "Please fill in all required fields.";
 
 export const SignUpCompany = () => {
   const navigate = useNavigate();
+  const { login } = useAuthContext();
   const [form, setForm] = useState({
     companyName: "",
     email: "",
@@ -88,8 +90,8 @@ export const SignUpCompany = () => {
         contactPhone: "N/A",
         focusAreas: [],
       });
-
-      navigate("/login/company");
+      await login(email, form.password, "company");
+      navigate("/company/dashboard");
     } catch (err) {
       setError(
         err instanceof Error

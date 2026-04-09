@@ -6,7 +6,7 @@ export interface UseAsyncState<T> {
   error: Error | null;
 }
 
-export interface UseAsyncActions<T> {
+export interface UseAsyncActions {
   refetch: () => Promise<void>;
   reset: () => void;
 }
@@ -18,7 +18,7 @@ export interface UseAsyncActions<T> {
 export function useAsyncData<T>(
   asyncFunction: () => Promise<T>,
   dependencies: React.DependencyList = []
-): UseAsyncState<T> & UseAsyncActions<T> {
+): UseAsyncState<T> & UseAsyncActions {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

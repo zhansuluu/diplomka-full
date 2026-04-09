@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { User, Briefcase, Clock, Github, Link as LinkIcon } from "lucide-react";
-import { internshipService, studentService, taskSubmissionService } from "../../api";
+import { applicationService, internshipService, studentService } from "../../api";
 
 function formatRelative(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -11,7 +11,7 @@ function formatRelative(iso: string): string {
   return diffDays === 1 ? "Yesterday" : `${diffDays} days ago`;
 }
 
-export const ReviewSubmission = () => {
+export const ReviewApplication = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -19,12 +19,10 @@ export const ReviewSubmission = () => {
   const [candidate, setCandidate] = useState<{
     name: string;
     internship: string;
-    taskTitle: string;
-    submittedAt: string;
+    appliedAt: string;
     github: string;
     portfolio: string;
-    fileName: string;
-    fileDataUrl?: string;
+    motivation: string;
   } | null>(null);
 
   useEffect(() => {
@@ -32,30 +30,28 @@ export const ReviewSubmission = () => {
     let cancelled = false;
 
     (async () => {
-      const submission = await taskSubmissionService.getById(id);
+      const application = await applicationService.getById(id);
       const [student, internship] = await Promise.all([
-        studentService.getStudent(submission.studentId),
-        internshipService.getInternship(submission.internshipId),
+        studentService.getStudent(application.studentId),
+        internshipService.getInternship(application.internshipId),
       ]);
 
       if (cancelled) return;
 
       setStatus(
-        submission.status === "APPROVED"
+        application.status === "ACCEPTED"
           ? "Approved"
-          : submission.status === "REJECTED"
+          : application.status === "REJECTED"
             ? "Rejected"
             : "Pending"
       );
       setCandidate({
         name: `${student.firstName} ${student.lastName}`.trim(),
         internship: internship.title,
-        taskTitle: submission.taskTitle,
-        submittedAt: formatRelative(submission.submittedAt),
-        github: student.githubUrl || "#",
-        portfolio: student.resumeUrl || "#",
-        fileName: submission.fileName,
-        fileDataUrl: submission.fileDataUrl,
+        appliedAt: formatRelative(application.appliedAt),
+        github: application.githubUrl || student.githubUrl || "#",
+        portfolio: application.portfolioUrl || student.resumeUrl || "#",
+        motivation: application.coverLetter || "No cover letter provided.",
       });
     })();
 
@@ -66,13 +62,13 @@ export const ReviewSubmission = () => {
 
   const updateStatus = async (next: "Approved" | "Rejected") => {
     if (!id) return;
-    const mapped = next === "Approved" ? "APPROVED" : "REJECTED";
-    await taskSubmissionService.updateStatus(id, mapped);
+    const mapped = next === "Approved" ? "ACCEPTED" : "REJECTED";
+    await applicationService.updateStatus(id, mapped);
     setStatus(next);
   };
 
   if (!candidate) {
-    return <div className="px-30 py-15">Loading submission...</div>;
+    return <div className="px-30 py-15">Loading application...</div>;
   }
 
   return (
@@ -81,7 +77,7 @@ export const ReviewSubmission = () => {
         onClick={() => navigate(-1)}
         className="w-fit border-[3px] border-black px-4 py-2 bg-white shadow-[4px_4px_0px_black] rounded-[4px] hover:translate-y-[2px] hover:shadow-none transition font-bold"
       >
-        ← Back
+        Back
       </button>
 
       <div className="bg-white border-[3px] border-black shadow-[8px_8px_0px_black] rounded-[4px] p-10 flex flex-col gap-8">
@@ -98,11 +94,9 @@ export const ReviewSubmission = () => {
               {candidate.internship}
             </div>
 
-            <div className="font-semibold text-black">{candidate.taskTitle}</div>
-
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Clock size={14} />
-              Submitted {candidate.submittedAt}
+              Applied {candidate.appliedAt}
             </div>
           </div>
         </div>
@@ -130,20 +124,8 @@ export const ReviewSubmission = () => {
         </div>
 
         <div className="border-[3px] border-black rounded-[4px] p-6 shadow-[4px_4px_0px_black] bg-[#F8F7FF]">
-          <h3 className="font-black mb-3">Submitted Solution</h3>
-          <p className="font-semibold">{candidate.fileName}</p>
-          <p className="text-sm text-gray-600 mt-2">
-            Review the uploaded task result and decide whether it meets the task requirements.
-          </p>
-          {candidate.fileDataUrl && (
-            <a
-              href={candidate.fileDataUrl}
-              download={candidate.fileName}
-              className="inline-flex mt-4 items-center gap-2 underline font-bold"
-            >
-              Download submitted file
-            </a>
-          )}
+          <h3 className="font-black mb-3">Motivation Letter</h3>
+          <p>{candidate.motivation}</p>
         </div>
 
         <div className="flex gap-4">

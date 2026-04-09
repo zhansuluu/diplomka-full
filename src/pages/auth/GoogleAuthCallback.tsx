@@ -1,31 +1,49 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authService, resolveUserFromAccessToken } from "../../api";
 
 export const GoogleAuthCallback = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
+    const mode = urlParams.get('mode');
+    const role = urlParams.get('role');
     const error = urlParams.get('error');
 
     if (error) {
-      console.error('Google OAuth error:', error);
-      // Handle error - redirect to login with error message
-      navigate('/login', { state: { error: 'Google authentication failed' } });
+      navigate(role === "company" ? '/login/company' : '/login/student', {
+        state: { error: 'Google authentication failed' },
+      });
       return;
     }
 
-    if (code) {
-      // TODO: Send code to backend for token exchange
-      console.log('Authorization code:', code);
+    if (mode === "local-google") {
+      const email =
+        role === "company" ? "company@caseup.local" : "student@caseup.local";
+      const password = role === "company" ? "company123" : "student123";
 
-      // For now, just redirect to dashboard
-      // In real implementation, exchange code for tokens and authenticate user
-      navigate('/student/dashboard');
-    } else {
-      navigate('/login');
+      authService
+        .login({ email, password })
+        .then(async (response) => {
+          authService.setToken(response.accessToken);
+          const resolved = await resolveUserFromAccessToken(response.accessToken, email);
+          localStorage.setItem("userRole", resolved.role);
+          localStorage.setItem("userId", resolved.user.id);
+          navigate(
+            resolved.role === "company" ? "/company/dashboard" : "/student/dashboard",
+            { replace: true }
+          );
+        })
+        .catch(() => {
+          navigate(role === "company" ? '/login/company' : '/login/student', {
+            replace: true,
+          });
+        });
+      return;
     }
+
+    navigate('/landing', { replace: true });
   }, [navigate]);
 
   return (

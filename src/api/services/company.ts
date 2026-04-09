@@ -1,67 +1,60 @@
-import { apiClient, type RequestOptions } from "../client";
-import { normalizeListPayload } from "../normalizeList";
-import { unwrapEntity } from "../unwrapEntity";
+import {
+  createLocalCompany,
+  getCompanyFromDb,
+  listCompaniesFromDb,
+  listFollowersForCompany,
+  updateLocalCompany,
+} from "../localDb";
 import type {
   CompanyResponse,
   CreateCompanyRequest,
-  UpdateCompanyRequest,
   ListCompaniesResponse,
   ListCompanyFollowersResponse,
   StatusOK,
+  UpdateCompanyRequest,
 } from "../types";
 
 export const companyService = {
-  // Get list of companies
   listCompanies: async (
     limit = 50,
-    offset = 0,
-    options?: RequestOptions
+    offset = 0
   ): Promise<ListCompaniesResponse> => {
-    const raw = await apiClient.get<unknown>(
-      `/company/api/v1/companies?limit=${limit}&offset=${offset}`,
-      options
-    );
-    return normalizeListPayload<CompanyResponse>(raw);
+    const items = listCompaniesFromDb().slice(offset, offset + limit);
+    return {
+      items,
+      total: listCompaniesFromDb().length,
+    };
   },
 
-  // Create a new company
   createCompany: async (data: CreateCompanyRequest): Promise<CompanyResponse> => {
-    const raw = await apiClient.post<unknown>("/company/api/v1/companies", data, { auth: false });
-    return unwrapEntity<CompanyResponse>(raw);
+    return createLocalCompany(data);
   },
 
-  // Get company by ID
-  getCompany: async (
-    id: string,
-    options?: RequestOptions
-  ): Promise<CompanyResponse> => {
-    const raw = await apiClient.get<unknown>(`/company/api/v1/companies/${id}`, options);
-    return unwrapEntity<CompanyResponse>(raw);
+  getCompany: async (id: string): Promise<CompanyResponse> => {
+    return getCompanyFromDb(id);
   },
 
-  // Update company
   updateCompany: async (
     id: string,
     data: UpdateCompanyRequest
   ): Promise<StatusOK> => {
-    return apiClient.put(`/company/api/v1/companies/${id}`, data);
+    updateLocalCompany(id, data);
+    return { status: "ok" };
   },
 
-  // Delete company
-  deleteCompany: async (id: string): Promise<StatusOK> => {
-    return apiClient.delete(`/company/api/v1/companies/${id}`);
+  deleteCompany: async (): Promise<StatusOK> => {
+    throw new Error("Deleting companies is disabled in local demo mode.");
   },
 
-  // Get company followers
   getFollowers: async (
     id: string,
     limit = 50,
     offset = 0
   ): Promise<ListCompanyFollowersResponse> => {
-    const raw = await apiClient.get<unknown>(
-      `/company/api/v1/companies/${id}/followers?limit=${limit}&offset=${offset}`
-    );
-    return normalizeListPayload(raw) as ListCompanyFollowersResponse;
+    const items = listFollowersForCompany(id);
+    return {
+      items: items.slice(offset, offset + limit),
+      total: items.length,
+    };
   },
-
 };

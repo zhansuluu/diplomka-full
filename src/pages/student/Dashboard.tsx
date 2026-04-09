@@ -4,7 +4,8 @@ import { CheckCircle, Clock, ListTodo, Loader, AlertCircle } from "lucide-react"
 import { useAuth } from "../../contexts/AuthContext";
 import { useAsyncData } from "../../hooks/useAsyncData";
 import useFavorites from "../../hooks/useFavorites";
-import { companyService, internshipService, studentService } from "../../api";
+import { applicationService, companyService, internshipService, studentService } from "../../api";
+import { getCaseTasks } from "../../api/localDb";
 import type { CompanyResponse, InternshipResponse } from "../../api/types";
 
 function monthsDuration(startIso: string, endIso: string): string {
@@ -20,22 +21,53 @@ function isActive(i: InternshipResponse): boolean {
   return new Date(i.endDate) >= new Date(new Date().toDateString());
 }
 
+function getTaskStatusStorageKey(studentId: string, internshipId: string) {
+  return `caseup:student-task-status:${studentId}:${internshipId}`;
+}
+
+function readTaskStatuses(studentId: string, internshipId: string): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(getTaskStatusStorageKey(studentId, internshipId));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 type DashboardPayload = {
   followedTotal: number;
   recommended: { internship: InternshipResponse; company: CompanyResponse | null } | null;
+  completedTasks: number;
+  inProgressTasks: number;
+  pendingTasks: number;
+  totalTasks: number;
 };
 
 export const Dashboard = () => {
   const { user, userRole } = useAuth();
-  const { favorites, toggle, isFavorite } = useFavorites();
+  const { toggle, isFavorite } = useFavorites();
 
   const firstName =
     userRole === "student" && user && "firstName" in user ? user.firstName : "there";
 
   const load = useCallback(async (): Promise<DashboardPayload> => {
-    const [followed, listRes] = await Promise.all([
+    if (userRole !== "student" || !user?.id) {
+      return {
+        followedTotal: 0,
+        recommended: null,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        pendingTasks: 0,
+        totalTasks: 0,
+      };
+    }
+
+    const [followed, listRes, applications] = await Promise.all([
       studentService.getFollowedCompanies(100, 0),
       internshipService.listInternships(undefined, 100, 0),
+      applicationService.listForStudent(user.id),
     ]);
 
     const items = listRes.items ?? [];
@@ -51,54 +83,89 @@ export const Dashboard = () => {
       }
     }
 
+    let completedTasks = 0;
+    let inProgressTasks = 0;
+    let pendingTasks = 0;
+    let totalTasks = 0;
+
+    for (const application of applications ?? []) {
+      const tasks = getCaseTasks(application.internshipId);
+      const statuses = readTaskStatuses(user.id, application.internshipId);
+
+      totalTasks += tasks.length;
+
+      tasks.forEach((task, index) => {
+        const fallbackStatus =
+          index === 0 ? "in_progress" : index === 1 ? "not_started" : "locked";
+        const status = statuses[task.id] ?? fallbackStatus;
+
+        if (status === "completed") {
+          completedTasks += 1;
+        } else if (status === "in_progress") {
+          inProgressTasks += 1;
+        } else {
+          pendingTasks += 1;
+        }
+      });
+    }
+
     return {
       followedTotal: followed.total ?? followed.items?.length ?? 0,
       recommended,
+      completedTasks,
+      inProgressTasks,
+      pendingTasks,
+      totalTasks,
     };
-  }, []);
+  }, [user?.id, userRole]);
 
   const { data, loading, error } = useAsyncData(load, [load]);
 
   const rec = data?.recommended;
+  const completionPercent =
+    data && data.totalTasks > 0
+      ? Math.round((data.completedTasks / data.totalTasks) * 100)
+      : 0;
 
   return (
     <div className="flex flex-col gap-10 px-20 py-5">
-      {/* Header */}
       <div>
         <h2 className="text-4xl font-bold">Welcome Back, {firstName}!</h2>
         <p className="text-gray-700 mt-2">
           {loading
-            ? "Loading your overview…"
+            ? "Loading your overview..."
             : `You're following ${data?.followedTotal ?? 0} ${
                 data?.followedTotal === 1 ? "company" : "companies"
               }`}
         </p>
       </div>
 
-      {/* Task Progress Card — progress bar left as static UI */}
       <div className="bg-white border-2 border-black p-8 shadow-[4px_4px_0px_black] rounded">
-        <p className="text-sm text-gray-500">Keep going! You&apos;re making great progress 🚀</p>
+        <p className="text-sm text-gray-500">Keep going! You&apos;re making great progress.</p>
 
         <h3 className="text-xl font-bold mt-2">Task Progress</h3>
 
         <div className="flex justify-between items-center mt-6">
           <span className="text-gray-700">Overall Completion</span>
-          <span className="text-2xl font-bold">65%</span>
+          <span className="text-2xl font-bold">{completionPercent}%</span>
         </div>
 
-        {/* Progress Bar */}
         <div className="mt-4 border-2 border-black h-6 bg-gray-200 relative rounded">
-          <div className="h-full bg-[#5D0CA0] w-[65%] rounded-[2px]" />
+          <div
+            className="h-full bg-[#5D0CA0] rounded-[2px]"
+            style={{ width: `${completionPercent}%` }}
+          />
         </div>
 
-        <p className="text-sm text-gray-600 mt-4">13 of 20 tasks completed</p>
+        <p className="text-sm text-gray-600 mt-4">
+          {data?.completedTasks ?? 0} of {data?.totalTasks ?? 0} tasks completed
+        </p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_black] rounded flex justify-between items-start">
           <div>
-            <h4 className="text-3xl font-bold text-[#6BCF7F]">13</h4>
+            <h4 className="text-3xl font-bold text-[#6BCF7F]">{data?.completedTasks ?? 0}</h4>
             <p className="text-gray-600 mt-2">Completed Tasks</p>
           </div>
           <div className="border-2 border-black p-2 rounded bg-[#6BCF7F] text-white">
@@ -108,7 +175,7 @@ export const Dashboard = () => {
 
         <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_black] rounded flex justify-between items-start">
           <div>
-            <h4 className="text-3xl font-bold">4</h4>
+            <h4 className="text-3xl font-bold">{data?.inProgressTasks ?? 0}</h4>
             <p className="text-gray-600 mt-2">In Progress</p>
           </div>
           <div className="border-2 border-black p-2 rounded bg-yellow-400 text-black">
@@ -118,7 +185,7 @@ export const Dashboard = () => {
 
         <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_black] rounded flex justify-between items-start">
           <div>
-            <h4 className="text-3xl font-bold text-[#5D0CA0]">3</h4>
+            <h4 className="text-3xl font-bold text-[#5D0CA0]">{data?.pendingTasks ?? 0}</h4>
             <p className="text-gray-600 mt-2">Pending Tasks</p>
           </div>
           <div className="border-2 border-black p-2 rounded bg-[#5D0CA0] text-white">
@@ -127,14 +194,13 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* Recommended Internships */}
       <div className="flex flex-col gap-4">
         <h3 className="text-2xl font-bold">Recommended Internships</h3>
 
         {loading && (
           <div className="bg-white border-2 border-black p-8 rounded shadow-[4px_4px_0px_black] flex items-center gap-3 text-gray-700">
             <Loader className="animate-spin" size={24} />
-            Loading recommendations…
+            Loading recommendations...
           </div>
         )}
 
@@ -163,7 +229,7 @@ export const Dashboard = () => {
             <h4 className="text-xl font-semibold">{rec.internship.title}</h4>
 
             <p className="text-gray-600">
-              {rec.company?.companyName ?? "Company"} • {rec.company?.headquarters?.trim() || "Location TBA"} •{" "}
+              {rec.company?.companyName ?? "Company"} - {rec.company?.headquarters?.trim() || "Location TBA"} -{" "}
               {rec.internship.startDate && rec.internship.endDate
                 ? monthsDuration(rec.internship.startDate, rec.internship.endDate)
                 : "Duration TBA"}

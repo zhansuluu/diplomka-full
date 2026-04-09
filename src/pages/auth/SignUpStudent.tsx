@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { studentService } from "../../api";
+import { Loader } from "lucide-react";
+import { useAuthContext } from "../../contexts/AuthContext";
 
 export const SignUpStudent = () => {
+  const navigate = useNavigate();
+  const { login } = useAuthContext();
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -9,6 +14,8 @@ export const SignUpStudent = () => {
     confirmPassword: "",
     agree: false,
   });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -16,11 +23,55 @@ export const SignUpStudent = () => {
       ...form,
       [name]: type === "checkbox" ? checked : value,
     });
+    setError("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(form);
+    const fullName = form.fullName.trim();
+    const email = form.email.trim();
+    const parts = fullName.split(/\s+/).filter(Boolean);
+    const firstName = parts[0] ?? "";
+    const lastName = parts.slice(1).join(" ");
+
+    if (!fullName || !email) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (!form.agree) {
+      setError("You must agree to the Terms of Service.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await studentService.createStudent({
+        firstName,
+        lastName: lastName || "Student",
+        email,
+        password: form.password,
+        contactEmail: email,
+        skills: [],
+      });
+      await login(email, form.password, "student");
+      navigate("/student/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create account. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,6 +123,11 @@ export const SignUpStudent = () => {
 
           {/* Form Body */}
           <div className="p-8">
+            {error && (
+              <div className="bg-red-50 border-2 border-red-300 p-4 mb-6 rounded text-red-700 text-sm">
+                {error}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit}>
 
@@ -164,9 +220,11 @@ export const SignUpStudent = () => {
                 {/* Submit */}
                 <button
                   type="submit"
-                  className="w-full bg-purple-800 text-white py-3 border-2 border-black shadow-[6px_6px_0px_black] hover:translate-y-[2px] hover:shadow-none transition"
+                  disabled={loading}
+                  className="w-full bg-purple-800 text-white py-3 border-2 border-black shadow-[6px_6px_0px_black] hover:translate-y-[2px] hover:shadow-none transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  CREATE ACCOUNT
+                  {loading && <Loader size={20} className="animate-spin" />}
+                  {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
                 </button>
 
               </div>

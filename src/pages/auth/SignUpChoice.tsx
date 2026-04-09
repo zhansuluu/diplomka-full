@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export const SignUpChoice = () => {
   const [role, setRole] = useState<"student" | "company" | null>(null);

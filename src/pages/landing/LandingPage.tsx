@@ -3,10 +3,7 @@ import {
   Briefcase,
   Sparkles,
   CheckCircle,
-  Building2,
-  Users,
   Brain,
-  Rocket,
   FileCheck,
   MoveRight
 } from "lucide-react";
@@ -510,30 +507,6 @@ const StepCard = ({
   </div>
 );
 
-const Card = ({ text, icon }: { text: string; icon: React.ReactNode }) => (
-  <div className="border-[3px] border-black rounded-2xl p-8 shadow-[6px_6px_0px_black] bg-white flex flex-col items-center gap-4 group hover:bg-[#F5EEFF] transition-colors">
-    <div className="text-[#9810FA]">{icon}</div>
-    <div className="font-black text-lg uppercase tracking-tight">{text}</div>
-  </div>
-);
-
-const ComparisonCard = ({ title, items, negative }: { title: string; items: string[]; negative?: boolean }) => (
-  <div className={`border-[3px] border-black rounded-2xl p-8 shadow-[8px_8px_0px_black] text-left h-full ${negative ? 'bg-gray-50' : 'bg-white'}`}>
-    <h3 className="font-black text-xl mb-6 uppercase tracking-tight underline decoration-4 decoration-[#9810FA] underline-offset-4">{title}</h3>
-    <ul className="space-y-4 font-bold">
-      {items.map((item, index) => (
-        <li key={index} className="flex items-center gap-3">
-          {negative ? (
-            <span className="text-red-500">✕</span>
-          ) : (
-            <span className="text-green-500">✓</span>
-          )}
-          {item}
-        </li>
-      ))}
-    </ul>
-  </div>
-);
 
 const AIPill = ({ text }: { text: string }) => (
   <div className="flex items-center gap-3 border-2 border-black bg-[#F4F0F8] px-4 py-3 rounded-xl font-semibold shadow-[2px_2px_0px_black]">
@@ -583,3 +556,4 @@ const WhyItem = ({ text, negative }: { text: string; negative?: boolean }) => (
     <span className="font-semibold">{text}</span>
   </div>
 );
+

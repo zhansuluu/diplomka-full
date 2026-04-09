@@ -1,55 +1,32 @@
-import { apiClient } from "../client";
+import { createLocalAccessToken, findUserByEmail } from "../localDb";
 import type { LoginRequest, LoginResponse } from "../types";
-
-/** Backend may return `{ code, data: { accessToken, ... }, message }`. */
-function unwrapDataEnvelope(raw: unknown): Record<string, unknown> {
-  if (!raw || typeof raw !== "object") return {};
-  const root = raw as Record<string, unknown>;
-  const inner = root.data ?? root.Data;
-  if (inner && typeof inner === "object" && !Array.isArray(inner)) {
-    return inner as Record<string, unknown>;
-  }
-  return root;
-}
-
-function normalizeLoginResponse(raw: unknown): LoginResponse {
-  const o = unwrapDataEnvelope(raw);
-  const accessToken =
-    (typeof o.accessToken === "string" && o.accessToken) ||
-    (typeof o.access_token === "string" && o.access_token) ||
-    (typeof o.AccessToken === "string" && o.AccessToken) ||
-    "";
-  const tokenType =
-    (typeof o.tokenType === "string" && o.tokenType) ||
-    (typeof o.token_type === "string" && o.token_type) ||
-    (typeof o.TokenType === "string" && o.TokenType) ||
-    "Bearer";
-  let expiresIn = 0;
-  const e = o.expiresIn ?? o.expires_in ?? o.ExpiresIn;
-  if (typeof e === "number") expiresIn = e;
-  else if (typeof e === "string") expiresIn = parseInt(e, 10) || 0;
-  return { accessToken, tokenType, expiresIn };
-}
 
 export const authService = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const raw = await apiClient.post<unknown>("/auth/api/v1/login", data, { auth: false });
-    const res = normalizeLoginResponse(raw);
-    if (!res.accessToken) {
-      throw new Error("Login response did not include an access token.");
+    const email = data.email.trim().toLowerCase();
+    const user = findUserByEmail(email);
+
+    if (!user || user.password !== data.password) {
+      throw new Error("Invalid email or password.");
     }
-    return res;
+
+    const accessToken = createLocalAccessToken(user);
+    return {
+      accessToken,
+      tokenType: "Bearer",
+      expiresIn: 60 * 60 * 24 * 7,
+    };
   },
 
   logout: () => {
-    apiClient.clearToken();
+    localStorage.removeItem("accessToken");
   },
 
   getToken: () => {
-    return apiClient.getToken();
+    return localStorage.getItem("accessToken");
   },
 
   setToken: (token: string) => {
-    apiClient.setToken(token);
+    localStorage.setItem("accessToken", token);
   },
 };

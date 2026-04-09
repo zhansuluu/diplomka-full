@@ -25,7 +25,6 @@ export const SmoothScroll = ({ rootRef }: SmoothScrollProps) => {
       content,
       duration: 1.15,
       smoothWheel: true,
-      smoothTouch: false,
       easing: ease,
     });
 

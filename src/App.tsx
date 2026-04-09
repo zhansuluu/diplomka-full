@@ -38,6 +38,8 @@ import { CandidateProfile } from './pages/company/CandidateProfile'
 import { CasePage } from './pages/company/CasePage'
 import { LandingPage } from './pages/landing/LandingPage'
 import { ReviewSubmission } from './pages/company/ReviewSubmission'
+import { Applications } from './pages/company/Applications'
+import { ReviewApplication } from './pages/company/ReviewApplication'
 import { CaseDetailPage } from './pages/company/CaseDetailPage'
 import { CompanyInternshipEdit } from './pages/company/CompanyInternshipEdit'
 import { GuestRoute } from './components/GuestRoute'
@@ -109,7 +111,7 @@ function App() {
             <Route path="favorites" element={<Favorites />} />
             <Route path="my-internship" element={<MyInternship />} />
             <Route path="my-internship/tasks" element={<KanbanBoard />} />
-            <Route path="my-internship/tasks/1" element={<TaskDetailsPage />} />
+            <Route path="my-internship/tasks/:taskId" element={<TaskDetailsPage />} />
           </Route>
         </Route>
 
@@ -121,14 +123,16 @@ function App() {
             <Route path="internships/:id" element={<CompanyInternshipEdit />} />
             <Route path="cases" element={<MyCases />} />
             <Route path="submissions" element={<Submissions />} />
+            <Route path="applications" element={<Applications />} />
             <Route path="candidates" element={<Candidates />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="profile" element={<CompanyProfile />} />
             <Route path="ai-creator" element={<AICreator />} />
-            <Route path="candidates/1" element={<CandidateProfile />} />
+            <Route path="candidates/:id" element={<CandidateProfile />} />
             <Route path="cases/:id" element={<CaseDetailPage />} />
             <Route path="cases/:id/tasks" element={<CasePage />} />
-            <Route path="review/1" element={<ReviewSubmission />} />
+            <Route path="review/:id" element={<ReviewSubmission />} />
+            <Route path="applications/review/:id" element={<ReviewApplication />} />
           </Route>
         </Route>
 

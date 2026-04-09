@@ -1,18 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { User, Clock, Briefcase, ArrowUpRight } from "lucide-react";
-import { internshipService, studentService, taskSubmissionService } from "../../api";
+import { applicationService, internshipService, studentService } from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAsyncData } from "../../hooks/useAsyncData";
 
-type SubmissionView = {
+type ApplicationView = {
   id: string;
   student: string;
   internship: string;
-  task: string;
-  fileName: string;
   program?: string;
-  submittedAt: string;
+  appliedAt: string;
   status: "Pending" | "Approved" | "Rejected";
   studentId: string;
 };
@@ -25,61 +23,59 @@ function formatRelative(iso: string): string {
   return diffDays === 1 ? "Yesterday" : `${diffDays} days ago`;
 }
 
-export const Submissions = () => {
+export const Applications = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [activeProgram, setActiveProgram] = useState<string>("All");
 
   const internshipIdFilter = searchParams.get("internshipId");
 
-  const { data: submissions = [] } = useAsyncData(
-    () => (user?.id ? taskSubmissionService.listForCompany(user.id) : Promise.resolve([])),
+  const { data: applications = [] } = useAsyncData(
+    () => (user?.id ? applicationService.listForCompany(user.id) : Promise.resolve([])),
     [user?.id]
   );
 
   const { data: internships = [] } = useAsyncData(
     async () => {
-      const ids = [...new Set((submissions ?? []).map((submission) => submission.internshipId))];
+      const ids = [...new Set((applications ?? []).map((application) => application.internshipId))];
       return Promise.all(ids.map((id) => internshipService.getInternship(id)));
     },
-    [(submissions ?? []).map((item) => item.id).join(",")]
+    [(applications ?? []).map((item) => item.id).join(",")]
   );
 
   const { data: students = [] } = useAsyncData(
     async () => {
-      const ids = [...new Set((submissions ?? []).map((submission) => submission.studentId))];
+      const ids = [...new Set((applications ?? []).map((application) => application.studentId))];
       return Promise.all(ids.map((id) => studentService.getStudent(id)));
     },
-    [(submissions ?? []).map((item) => item.id).join(",")]
+    [(applications ?? []).map((item) => item.id).join(",")]
   );
 
-  const rows = useMemo<SubmissionView[]>(() => {
+  const rows = useMemo<ApplicationView[]>(() => {
     const internshipById = Object.fromEntries((internships ?? []).map((item) => [item.id, item]));
     const studentById = Object.fromEntries((students ?? []).map((item) => [item.id, item]));
-    return (submissions ?? [])
-      .filter((submission) =>
-        internshipIdFilter ? submission.internshipId === internshipIdFilter : true
+    return (applications ?? [])
+      .filter((application) =>
+        internshipIdFilter ? application.internshipId === internshipIdFilter : true
       )
-      .map((submission) => ({
-        id: submission.id,
+      .map((application) => ({
+        id: application.id,
         student:
-          studentById[submission.studentId]
-            ? `${studentById[submission.studentId].firstName} ${studentById[submission.studentId].lastName}`
+          studentById[application.studentId]
+            ? `${studentById[application.studentId].firstName} ${studentById[application.studentId].lastName}`
             : "Student",
-        internship: internshipById[submission.internshipId]?.title ?? "Internship",
-        task: submission.taskTitle,
-        fileName: submission.fileName,
-        program: internshipById[submission.internshipId]?.title,
-        submittedAt: formatRelative(submission.submittedAt),
+        internship: internshipById[application.internshipId]?.title ?? "Internship",
+        program: internshipById[application.internshipId]?.title,
+        appliedAt: formatRelative(application.appliedAt),
         status:
-          submission.status === "APPROVED"
+          application.status === "ACCEPTED"
             ? "Approved"
-            : submission.status === "REJECTED"
+            : application.status === "REJECTED"
               ? "Rejected"
               : "Pending",
-        studentId: submission.studentId,
+        studentId: application.studentId,
       }));
-  }, [internshipIdFilter, internships, students, submissions]);
+  }, [applications, internshipIdFilter, internships, students]);
 
   const programs = Array.from(new Set(rows.map((row) => row.program).filter(Boolean))) as string[];
   const filtered =
@@ -90,8 +86,8 @@ export const Submissions = () => {
   return (
     <div className="flex flex-col gap-10 px-30 py-15">
       <div>
-        <h2 className="text-4xl font-bold">Task Submissions</h2>
-        <p className="text-gray-600 mt-2">Review and manage submitted internship tasks</p>
+        <h2 className="text-4xl font-bold">Student Applications</h2>
+        <p className="text-gray-600 mt-2">Review and manage student applications</p>
       </div>
 
       <div className="flex flex-col gap-5">
@@ -115,12 +111,12 @@ export const Submissions = () => {
 
         {filtered.length === 0 ? (
           <div className="bg-white border-[3px] border-black shadow-[4px_4px_0px_black] rounded-[4px] p-8">
-            No task submissions yet.
+            No applications yet.
           </div>
         ) : (
-          filtered.map((submission) => (
+          filtered.map((application) => (
             <div
-              key={submission.id}
+              key={application.id}
               className="bg-white border-[3px] border-black shadow-[4px_4px_0px_black] rounded-[4px] p-8 flex justify-between items-center transition-all"
             >
               <div className="flex items-center gap-6">
@@ -129,35 +125,29 @@ export const Submissions = () => {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <div className="text-xl font-black">{submission.student}</div>
+                  <div className="text-xl font-black">{application.student}</div>
 
                   <div className="flex items-center gap-2 text-[#9810FA] font-bold">
                     <Briefcase size={16} />
-                    {submission.internship}
+                    {application.internship}
                   </div>
-
-                  <div className="text-sm font-semibold text-black">
-                    {submission.task}
-                  </div>
-
-                  <div className="text-sm text-gray-600">{submission.fileName}</div>
 
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock size={14} />
-                    Submitted {submission.submittedAt}
+                    Applied {application.appliedAt}
                   </div>
 
                   <div className="flex flex-row items-center text-center gap-5">
-                    <StatusBadge status={submission.status} />
+                    <StatusBadge status={application.status} />
 
-                    {submission.program && (
+                    {application.program && (
                       <div className="inline-block mt-2 px-3 py-1 border-2 border-black rounded-[4px] text-sm font-bold bg-gray-100">
-                        {submission.program}
+                        {application.program}
                       </div>
                     )}
 
                     <Link
-                      to={`/company/candidates/${submission.studentId}`}
+                      to={`/company/candidates/${application.studentId}`}
                       className="text-sm font-bold text-black underline flex items-center gap-1"
                     >
                       View Candidate Profile
@@ -168,7 +158,7 @@ export const Submissions = () => {
               </div>
 
               <Link
-                to={`/company/review/${submission.id}`}
+                to={`/company/applications/review/${application.id}`}
                 className="bg-[#5D0CA0] text-white border-[3px] border-black px-6 py-2 shadow-[4px_4px_0px_black] rounded-[4px] font-bold transition"
               >
                 Review

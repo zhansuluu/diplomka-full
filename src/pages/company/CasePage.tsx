@@ -1,11 +1,11 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
-const STORAGE_PREFIX = "caseup:caseTasks:";
+import { ensureCaseTasksForInternship, saveCaseTasks } from "../../api/localDb";
 
 type CaseTask = {
   id: string;
+  caseId?: string;
   title: string;
   difficulty: string;
   duration: string;
@@ -13,55 +13,6 @@ type CaseTask = {
   requirements: string;
   acceptance: string;
 };
-
-function defaultTasks(): CaseTask[] {
-  return [
-    {
-      id: crypto.randomUUID(),
-      title: "Complete onboarding",
-      difficulty: "Easy",
-      duration: "1 day",
-      objective:
-        "Understand the technical architecture, coding standards, and development workflow of the project.",
-      requirements: `Review architecture documentation
-Study API documentation
-Read style guide and conventions
-Understand Git workflow`,
-      acceptance: `Can explain system architecture
-Familiar with API endpoints
-Understands coding standards
-Completed documentation quiz`,
-    },
-    {
-      id: crypto.randomUUID(),
-      title: "First feature slice",
-      difficulty: "Medium",
-      duration: "3 days",
-      objective: "Ship a small vertical slice with tests.",
-      requirements: "TypeScript\nReact\nGit",
-      acceptance: "PR merged\nTests green",
-    },
-  ];
-}
-
-function loadTasks(caseId: string): CaseTask[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + caseId);
-    if (!raw) return defaultTasks();
-    const parsed = JSON.parse(raw) as CaseTask[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return defaultTasks();
-    return parsed.map((t) => ({
-      ...t,
-      id: t.id || crypto.randomUUID(),
-    }));
-  } catch {
-    return defaultTasks();
-  }
-}
-
-function saveTasks(caseId: string, tasks: CaseTask[]) {
-  localStorage.setItem(STORAGE_PREFIX + caseId, JSON.stringify(tasks));
-}
 
 export const CasePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -72,7 +23,7 @@ export const CasePage = () => {
   const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
-    const loaded = loadTasks(caseKey);
+    const loaded = ensureCaseTasksForInternship(caseKey);
     setTasks(loaded);
     setSelectedId(loaded[0]?.id ?? null);
   }, [caseKey]);
@@ -83,7 +34,7 @@ export const CasePage = () => {
   );
 
   const persist = useCallback(() => {
-    saveTasks(caseKey, tasks);
+    saveCaseTasks(caseKey, tasks.map((task) => ({ ...task, caseId: caseKey })));
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 2000);
   }, [caseKey, tasks]);
@@ -134,7 +85,7 @@ export const CasePage = () => {
         <div>
           <h1 className="text-4xl font-bold">Manage tasks</h1>
           <p className="text-gray-600 mt-2">
-            Edits are saved in this browser only (localStorage) for case{" "}
+            Edits are saved locally in this browser for case{" "}
             <code className="bg-gray-100 px-1 rounded text-sm">{caseKey}</code>
           </p>
         </div>

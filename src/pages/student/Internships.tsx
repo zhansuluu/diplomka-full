@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { MapPin, Clock, Code, Loader, AlertCircle, Search } from "lucide-react";
 import ApplyModal from "../../components/ApplyModal";
 import { useAsyncData } from "../../hooks/useAsyncData";
-import { companyService, internshipService } from "../../api";
+import { applicationService, companyService, internshipService } from "../../api";
 import type { CompanyResponse, InternshipResponse } from "../../api/types";
+import { useAuth } from "../../contexts/AuthContext";
 
 function monthsDuration(startIso: string, endIso: string): string {
   const a = new Date(startIso).getTime();
@@ -20,10 +21,12 @@ function isActive(i: InternshipResponse): boolean {
 }
 
 export const Internships = () => {
+  const { user, userRole } = useAuth();
   const [query, setQuery] = useState("");
   const [activeOnly, setActiveOnly] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState("");
+  const [applyError, setApplyError] = useState("");
 
   const load = useCallback(async () => {
     const { items } = await internshipService.listInternships(undefined, 100, 0);
@@ -45,6 +48,18 @@ export const Internships = () => {
   }, []);
 
   const { data, loading, error } = useAsyncData(load, [load]);
+  const { data: applications = [], refetch: refetchApplications } = useAsyncData(
+    () =>
+      userRole === "student" && user?.id
+        ? applicationService.listForStudent(user.id)
+        : Promise.resolve([]),
+    [user?.id, userRole]
+  );
+
+  const appliedIds = useMemo(
+    () => new Set((applications ?? []).map((application) => application.internshipId)),
+    [applications]
+  );
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -135,6 +150,7 @@ export const Internships = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {filtered.map((internship) => {
             const company = data.companyById[internship.companyId];
+            const hasApplied = appliedIds.has(internship.id);
             const duration =
               internship.startDate && internship.endDate
                 ? monthsDuration(internship.startDate, internship.endDate)
@@ -191,11 +207,14 @@ export const Internships = () => {
                   </Link>
                   <button
                     type="button"
-                    disabled={!isActive(internship)}
-                    onClick={() => setSelectedId(internship.id)}
+                    disabled={!isActive(internship) || hasApplied}
+                    onClick={() => {
+                      setApplyError("");
+                      setSelectedId(internship.id);
+                    }}
                     className="flex-1 bg-[#5D0CA0] text-white border-2 border-black px-4 py-2 shadow-[4px_4px_0px_black] rounded hover:translate-y-[2px] hover:shadow-none transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Apply
+                    {hasApplied ? "Applied" : "Apply"}
                   </button>
                 </div>
               </div>
@@ -210,13 +229,27 @@ export const Internships = () => {
         </div>
       )}
 
+      {applyError && (
+        <div className="fixed top-6 right-6 bg-red-600 text-white px-4 py-2 rounded shadow z-50 border-2 border-black max-w-sm">
+          {applyError}
+        </div>
+      )}
+
       <ApplyModal
         open={!!selected}
         title={selected?.title}
         onClose={() => setSelectedId(null)}
         onSubmit={async (coverLetter: string) => {
-          console.log("Apply to internship", selected?.id, coverLetter);
-          await new Promise((res) => setTimeout(res, 500));
+          if (!selected) return;
+          try {
+            await applicationService.submit(selected.id, coverLetter);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Could not submit application.";
+            setApplyError(message);
+            setTimeout(() => setApplyError(""), 3000);
+            throw error;
+          }
+          await refetchApplications();
           setSuccessMsg("Application submitted");
           setTimeout(() => setSuccessMsg(""), 3000);
         }}

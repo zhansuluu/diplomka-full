@@ -1,85 +1,71 @@
-import { apiClient, type RequestOptions } from "../client";
-import { normalizeListPayload } from "../normalizeList";
-import { unwrapEntity } from "../unwrapEntity";
+import {
+  addEducationToStudent,
+  addExperienceToStudent,
+  createLocalStudent,
+  deleteStudentEducation,
+  deleteStudentExperience,
+  followCompanyLocally,
+  getStudentFromDb,
+  listFollowedCompaniesForStudent,
+  listStudentsFromDb,
+  requireCurrentStudentId,
+  unfollowCompanyLocally,
+  updateLocalStudent,
+  updateStudentEducation,
+  updateStudentExperience,
+} from "../localDb";
 import type {
-  StudentResponse,
-  CreateStudentRequest,
-  UpdateStudentRequest,
-  ListStudentsResponse,
   CreateEducationRequest,
-  UpdateEducationRequest,
-  EducationItem,
   CreateExperienceRequest,
-  UpdateExperienceRequest,
+  CreateStudentRequest,
+  EducationItem,
   ExperienceItem,
   ListFollowedCompaniesResponse,
+  ListStudentsResponse,
   StatusOK,
+  StudentResponse,
+  UpdateEducationRequest,
+  UpdateExperienceRequest,
+  UpdateStudentRequest,
 } from "../types";
 
-/** API may send skills as strings or legacy integers — always use string[] in the app. */
-function normalizeStudent(s: StudentResponse): StudentResponse {
-  const skills = Array.isArray(s.skills)
-    ? (s.skills as unknown[]).map((x) => String(x).trim()).filter(Boolean)
-    : [];
-  return { ...s, skills };
-}
-
 export const studentService = {
-  // Get list of students
   listStudents: async (
     limit = 50,
-    offset = 0,
-    options?: RequestOptions
+    offset = 0
   ): Promise<ListStudentsResponse> => {
-    const raw = await apiClient.get<unknown>(
-      `/student/api/v1/students?limit=${limit}&offset=${offset}`,
-      options
-    );
-    const list = normalizeListPayload<StudentResponse>(raw);
+    const all = listStudentsFromDb();
     return {
-      ...list,
-      items: list.items.map(normalizeStudent),
+      items: all.slice(offset, offset + limit),
+      total: all.length,
     };
   },
 
-  // Create a new student
   createStudent: async (data: CreateStudentRequest): Promise<StudentResponse> => {
-    const raw = await apiClient.post<unknown>("/student/api/v1/students", data, { auth: false });
-    return normalizeStudent(unwrapEntity<StudentResponse>(raw));
+    return createLocalStudent(data);
   },
 
-  // Get student by ID
-  getStudent: async (
-    id: string,
-    options?: RequestOptions
-  ): Promise<StudentResponse> => {
-    const raw = await apiClient.get<unknown>(`/student/api/v1/students/${id}`, options);
-    return normalizeStudent(unwrapEntity<StudentResponse>(raw));
+  getStudent: async (id: string): Promise<StudentResponse> => {
+    return getStudentFromDb(id);
   },
 
-  // Update student
   updateStudent: async (
     id: string,
     data: UpdateStudentRequest
   ): Promise<StatusOK> => {
-    return apiClient.put(`/student/api/v1/students/${id}`, data);
+    updateLocalStudent(id, data);
+    return { status: "ok" };
   },
 
-  // Delete student
-  deleteStudent: async (id: string): Promise<StatusOK> => {
-    return apiClient.delete(`/student/api/v1/students/${id}`);
+  deleteStudent: async (): Promise<StatusOK> => {
+    throw new Error("Deleting students is disabled in local demo mode.");
   },
 
-  // Education endpoints
   addEducation: async (
     studentId: string,
     data: CreateEducationRequest
   ): Promise<EducationItem> => {
-    const raw = await apiClient.post<unknown>(
-      `/student/api/v1/students/${studentId}/education`,
-      data
-    );
-    return unwrapEntity<EducationItem>(raw);
+    return addEducationToStudent(studentId, data);
   },
 
   updateEducation: async (
@@ -87,31 +73,23 @@ export const studentService = {
     educationId: string,
     data: UpdateEducationRequest
   ): Promise<StatusOK> => {
-    return apiClient.put(
-      `/student/api/v1/students/${studentId}/education/${educationId}`,
-      data
-    );
+    updateStudentEducation(studentId, educationId, data);
+    return { status: "ok" };
   },
 
   deleteEducation: async (
     studentId: string,
     educationId: string
   ): Promise<StatusOK> => {
-    return apiClient.delete(
-      `/student/api/v1/students/${studentId}/education/${educationId}`
-    );
+    deleteStudentEducation(studentId, educationId);
+    return { status: "ok" };
   },
 
-  // Experience endpoints
   addExperience: async (
     studentId: string,
     data: CreateExperienceRequest
   ): Promise<ExperienceItem> => {
-    const raw = await apiClient.post<unknown>(
-      `/student/api/v1/students/${studentId}/experience`,
-      data
-    );
-    return unwrapEntity<ExperienceItem>(raw);
+    return addExperienceToStudent(studentId, data);
   },
 
   updateExperience: async (
@@ -119,42 +97,39 @@ export const studentService = {
     experienceId: string,
     data: UpdateExperienceRequest
   ): Promise<StatusOK> => {
-    return apiClient.put(
-      `/student/api/v1/students/${studentId}/experience/${experienceId}`,
-      data
-    );
+    updateStudentExperience(studentId, experienceId, data);
+    return { status: "ok" };
   },
 
   deleteExperience: async (
     studentId: string,
     experienceId: string
   ): Promise<StatusOK> => {
-    return apiClient.delete(
-      `/student/api/v1/students/${studentId}/experience/${experienceId}`
-    );
+    deleteStudentExperience(studentId, experienceId);
+    return { status: "ok" };
   },
 
-  // Company subscription endpoints
   followCompany: async (companyId: string): Promise<StatusOK> => {
-    return apiClient.post(
-      `/student/api/v1/companies/${companyId}/follow`,
-      {}
-    );
+    const studentId = requireCurrentStudentId();
+    followCompanyLocally(studentId, companyId);
+    return { status: "ok" };
   },
 
   unfollowCompany: async (companyId: string): Promise<StatusOK> => {
-    return apiClient.delete(
-      `/student/api/v1/companies/${companyId}/follow`
-    );
+    const studentId = requireCurrentStudentId();
+    unfollowCompanyLocally(studentId, companyId);
+    return { status: "ok" };
   },
 
   getFollowedCompanies: async (
     limit = 50,
     offset = 0
   ): Promise<ListFollowedCompaniesResponse> => {
-    const raw = await apiClient.get<unknown>(
-      `/student/api/v1/me/followed-companies?limit=${limit}&offset=${offset}`
-    );
-    return normalizeListPayload(raw) as ListFollowedCompaniesResponse;
+    const studentId = requireCurrentStudentId();
+    const items = listFollowedCompaniesForStudent(studentId);
+    return {
+      items: items.slice(offset, offset + limit),
+      total: items.length,
+    };
   },
 };

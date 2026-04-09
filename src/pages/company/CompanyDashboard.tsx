@@ -169,7 +169,7 @@ export const CompanyDashboard = () => {
                 View details
               </Link>
               <Link
-                to={`/company/submissions?internshipId=${featured.id}`}
+                to={`/company/applications?internshipId=${featured.id}`}
                 className="flex-1 text-center bg-[#5D0CA0] text-white border-2 border-black px-4 py-2 shadow-[4px_4px_0px_black] rounded hover:translate-y-[2px] hover:shadow-none transition"
               >
                 Review applications
