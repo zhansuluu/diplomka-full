@@ -5,7 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useAsyncData } from "../../hooks/useAsyncData";
 import useFavorites from "../../hooks/useFavorites";
 import { applicationService, companyService, internshipService, studentService } from "../../api";
-import { getCaseTasks } from "../../api/localDb";
+import { getCaseTasks, isTaskAssignedToStudent } from "../../api/localDb";
 import type { CompanyResponse, InternshipResponse } from "../../api/types";
 
 function monthsDuration(startIso: string, endIso: string): string {
@@ -89,7 +89,9 @@ export const Dashboard = () => {
     let totalTasks = 0;
 
     for (const application of applications ?? []) {
-      const tasks = getCaseTasks(application.internshipId);
+      const tasks = getCaseTasks(application.internshipId).filter((task) =>
+        isTaskAssignedToStudent(task, user.id)
+      );
       const statuses = readTaskStatuses(user.id, application.internshipId);
 
       totalTasks += tasks.length;

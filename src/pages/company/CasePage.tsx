@@ -1,7 +1,10 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, UserRound } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureCaseTasksForInternship, saveCaseTasks } from "../../api/localDb";
+import { applicationService, studentService } from "../../api";
+import { useAsyncData } from "../../hooks/useAsyncData";
+import { useAuth } from "../../contexts/AuthContext";
 
 type CaseTask = {
   id: string;
@@ -12,15 +15,51 @@ type CaseTask = {
   objective: string;
   requirements: string;
   acceptance: string;
+  assignedStudentId?: string;
 };
 
 export const CasePage = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const caseKey = id ?? "default";
 
   const [tasks, setTasks] = useState<CaseTask[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+  const { data: students = [] } = useAsyncData(
+    async () => {
+      if (!user?.id || !caseKey) return [];
+      const applications = await applicationService.listForCompany(user.id);
+      const assignedStudentIds = [
+        ...new Set(
+          applications
+            .filter(
+              (application) =>
+                application.internshipId === caseKey && application.status === "ACCEPTED"
+            )
+            .map((application) => application.studentId)
+        ),
+      ];
+
+      return Promise.all(assignedStudentIds.map((studentId) => studentService.getStudent(studentId)));
+    },
+    [caseKey, user?.id]
+  );
+  const studentOptions = students ?? [];
+
+  const studentById = useMemo(
+    () => new Map(studentOptions.map((student) => [student.id, student])),
+    [studentOptions]
+  );
+
+  const getAssigneeName = useCallback(
+    (studentId?: string) => {
+      if (!studentId) return "Unassigned";
+      const student = studentById.get(studentId);
+      return student ? `${student.firstName} ${student.lastName}`.trim() : "Unknown student";
+    },
+    [studentById]
+  );
 
   useEffect(() => {
     const loaded = ensureCaseTasksForInternship(caseKey);
@@ -55,6 +94,7 @@ export const CasePage = () => {
       objective: "",
       requirements: "",
       acceptance: "",
+      assignedStudentId: "",
     };
     setTasks((prev) => [...prev, t]);
     setSelectedId(t.id);
@@ -141,6 +181,10 @@ export const CasePage = () => {
                   <span className="text-green-700">{task.difficulty}</span>
                   <span className="text-gray-500">{task.duration}</span>
                 </div>
+                <div className="mt-3 inline-flex max-w-full items-center gap-2 border border-black rounded bg-white px-2 py-1 text-xs text-gray-700">
+                  <UserRound size={13} className="shrink-0" />
+                  <span className="truncate">{getAssigneeName(task.assignedStudentId)}</span>
+                </div>
               </button>
             ))}
           </div>
@@ -183,6 +227,27 @@ export const CasePage = () => {
                   />
                 </label>
               </div>
+
+              <label className="flex flex-col gap-2">
+                <span className="font-semibold">Assignee</span>
+                <select
+                  value={selected.assignedStudentId ?? ""}
+                  onChange={(e) => updateSelected({ assignedStudentId: e.target.value })}
+                  className="border-2 border-black px-3 py-2 rounded text-sm bg-white"
+                >
+                  <option value="">Unassigned - hidden from students</option>
+                  {studentOptions.map((student) => (
+                    <option key={student.id} value={student.id}>
+                      {student.firstName} {student.lastName}
+                    </option>
+                  ))}
+                </select>
+                {studentOptions.length === 0 && (
+                  <span className="text-sm text-gray-500">
+                    Approve a student application for this internship before assigning tasks.
+                  </span>
+                )}
+              </label>
 
               <label className="flex flex-col gap-2">
                 <span className="font-semibold">Objective</span>

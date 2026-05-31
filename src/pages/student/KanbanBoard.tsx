@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAsyncData } from "../../hooks/useAsyncData";
 import { applicationService } from "../../api";
-import { getCaseTasks } from "../../api/localDb";
+import { getCaseTasks, isTaskAssignedToStudent } from "../../api/localDb";
 
 function getActiveInternshipStorageKey(userId: string) {
   return `caseup:selected-internship-id:${userId}`;
@@ -81,7 +81,10 @@ export const KanbanBoard = () => {
     })[0];
 
   const internshipId = activeApplication?.internshipId ?? null;
-  const caseTasks = internshipId ? getCaseTasks(internshipId) : [];
+  const caseTasks =
+    internshipId && user?.id
+      ? getCaseTasks(internshipId).filter((task) => isTaskAssignedToStudent(task, user.id))
+      : [];
   const taskIds = caseTasks.map((task) => task.id);
 
   const [taskStatuses, setTaskStatuses] = useState<Record<string, Status>>(() =>

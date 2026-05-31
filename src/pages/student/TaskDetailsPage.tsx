@@ -3,7 +3,7 @@ import { ArrowLeft, X, Sparkles } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { applicationService, mentorService, taskSubmissionService } from "../../api";
-import { getCaseTaskById } from "../../api/localDb";
+import { getCaseTaskById, isTaskAssignedToStudent } from "../../api/localDb";
 import { useAsyncData } from "../../hooks/useAsyncData";
 
 const MENTOR_STORAGE_PREFIX = "caseup:mentor-thread";
@@ -260,7 +260,9 @@ export const TaskDetailsPage = () => {
     "What should I check before submission?",
   ];
 
-  if (!task || !internshipId) {
+  const canOpenTask = task && user?.id ? isTaskAssignedToStudent(task, user.id) : false;
+
+  if (!task || !internshipId || !canOpenTask) {
     return (
       <div className="flex-1 px-20 py-8">
         <Link
@@ -271,7 +273,9 @@ export const TaskDetailsPage = () => {
           Back to Board
         </Link>
         <div className="bg-white border-2 border-black shadow-[6px_6px_0px_black] rounded p-8 max-w-2xl">
-          <p className="text-gray-700">Task not found for the current internship.</p>
+          <p className="text-gray-700">
+            Task not found for the current internship or it is assigned to another student.
+          </p>
         </div>
       </div>
     );

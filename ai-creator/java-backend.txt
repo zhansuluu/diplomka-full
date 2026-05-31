@@ -1,0 +1,39 @@
+Java Backend Developer Internship
+
+We are looking for a motivated Java Backend Developer intern to help build and improve backend services for a web platform. The intern will work with Java, Spring Boot, REST APIs, relational databases, and basic software architecture practices.
+
+The goal of this internship is to help the student learn how production backend systems are designed, implemented, tested, and maintained. The intern should gradually move from understanding an existing backend structure to implementing a small but complete feature with proper validation, persistence, API design, and testing.
+
+Main responsibilities:
+- Analyze existing backend requirements and understand the domain model.
+- Design REST API endpoints for a small product feature.
+- Implement backend logic using Java and Spring Boot.
+- Work with database entities, repositories, and service layers.
+- Add request validation and meaningful error handling.
+- Write unit tests or integration tests for core backend logic.
+- Document implemented endpoints and important technical decisions.
+- Review code quality, edge cases, and possible improvements.
+
+Required skills:
+- Basic Java knowledge.
+- Understanding of object-oriented programming.
+- Familiarity with REST APIs.
+- Basic SQL knowledge.
+- Basic understanding of HTTP methods and status codes.
+- Willingness to learn Spring Boot, JPA/Hibernate, and backend testing.
+
+Preferred tools and technologies:
+- Java 17+
+- Spring Boot
+- Spring Web
+- Spring Data JPA
+- PostgreSQL or MySQL
+- Maven or Gradle
+- JUnit
+- Git
+- Postman or similar API testing tool
+
+Expected internship outcome:
+By the end of the internship, the student should be able to implement a backend feature from requirements to tested API endpoints. The final result should include clean service-layer logic, database persistence, validation, error handling, and basic documentation.
+
+The internship should be structured as a sequence of practical tasks. Each task should have a clear objective, implementation requirements, and acceptance criteria. Tasks should start with backend analysis and setup, then move into API design, implementation, testing, and final review.

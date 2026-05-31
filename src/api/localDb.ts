@@ -100,6 +100,7 @@ export interface LocalCaseTask {
   objective: string;
   requirements: string;
   acceptance: string;
+  assignedStudentId?: string;
 }
 
 export interface LocalTaskSubmission {
@@ -1524,6 +1525,10 @@ export function getCaseTasks(caseId: string): LocalCaseTask[] {
   return readLocalDb().caseTasks.filter((item) => item.caseId === caseId);
 }
 
+export function isTaskAssignedToStudent(task: LocalCaseTask, studentId: string): boolean {
+  return task.assignedStudentId === studentId;
+}
+
 export function ensureCaseTasksForInternship(caseId: string): LocalCaseTask[] {
   const db = readLocalDb();
   const internship = db.internships.find((item) => item.id === caseId);
@@ -1555,6 +1560,7 @@ export function saveCaseTasks(caseId: string, tasks: LocalCaseTask[]): LocalCase
       ...tasks.map((task) => ({
         ...task,
         caseId,
+        assignedStudentId: task.assignedStudentId || undefined,
       }))
     );
   });
